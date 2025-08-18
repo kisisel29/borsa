@@ -1,0 +1,96 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Candle {
+  id        String   @id @default(cuid())
+  exchange  String
+  symbol    String
+  timeframe String
+  time      DateTime
+  open      Float
+  high      Float
+  low       Float
+  close     Float
+  volume    Float
+  createdAt DateTime @default(now())
+
+  @@unique([exchange, symbol, timeframe, time])
+  @@index([symbol, timeframe, time])
+  @@map("candles")
+}
+
+model StrategyParam {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     String
+  updatedAt DateTime @updatedAt
+
+  @@map("strategy_params")
+}
+
+model Trade {
+  id          String    @id @default(cuid())
+  side        String    // "LONG" | "SHORT"
+  entryTime   DateTime
+  exitTime    DateTime?
+  entryPrice  Float
+  exitPrice   Float?
+  size        Float // coin amount
+  pnl         Float? // realized PnL
+  pnlPct      Float? // PnL percentage
+  stopLoss    Float?
+  takeProfit  Float?
+  notes       String?
+  isBacktest  Boolean   @default(false)
+  symbol      String    @default("ETH/USDT")
+  createdAt   DateTime  @default(now())
+
+  @@index([symbol, entryTime])
+  @@index([isBacktest])
+  @@map("trades")
+}
+
+model Position {
+  id          String    @id @default(cuid())
+  isOpen      Boolean   @default(true)
+  side        String    // "LONG" | "SHORT"
+  openTime    DateTime
+  openPrice   Float
+  size        Float
+  stopLoss    Float?
+  takeProfit  Float?
+  symbol      String    @default("ETH/USDT")
+  unrealizedPnl Float?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([symbol, isOpen])
+  @@map("positions")
+}
+
+model Signal {
+  id        String   @id @default(cuid())
+  symbol    String
+  action    String   // "BUY" | "SELL" | "HOLD"
+  price     Float
+  timestamp DateTime
+  emaFast   Float?
+  emaSlow   Float?
+  rsi       Float?
+  macdValue Float?
+  macdSignal Float?
+  macdHist  Float?
+  notes     String?
+
+  @@index([symbol, timestamp])
+  @@map("signals")
+}
