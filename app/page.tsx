@@ -28,13 +28,12 @@ interface DashboardData {
   lastUpdated: string;
 }
 
-// Canlı veri hook'u
-function useLivePrice(refreshInterval = 5000) {
+// Basitleştirilmiş canlı veri hook'u
+function useLivePrice(refreshInterval = 10000) {
   const [currentPrice, setCurrentPrice] = useState<number | null>(null);
   const [lastUpdated, setLastUpdated] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [lastFetchTime, setLastFetchTime] = useState(0);
   const [updateCount, setUpdateCount] = useState(0);
 
   const fetchLivePrice = async () => {
@@ -50,8 +49,7 @@ function useLivePrice(refreshInterval = 5000) {
         console.log('✅ Live price updated:', result.data.currentPrice);
         setCurrentPrice(result.data.currentPrice);
         setLastUpdated(result.data.lastUpdated);
-        setLastFetchTime(Date.now());
-        setUpdateCount(prev => prev + 1); // Görsel güncelleme için
+        setUpdateCount(prev => prev + 1);
       } else {
         console.log('❌ Live price error:', result.error);
         setError(result.error || 'Veri çekilemedi');
@@ -67,96 +65,18 @@ function useLivePrice(refreshInterval = 5000) {
 
   useEffect(() => {
     console.log('🚀 Live price hook initialized, interval:', refreshInterval);
+    
     // İlk yükleme
     fetchLivePrice();
 
-    // Çoklu interval kullanarak tarayıcı optimizasyonunu bypass et
-    const intervals: NodeJS.Timeout[] = [];
-    
-    // Ana interval
-    const mainInterval = setInterval(fetchLivePrice, refreshInterval);
-    intervals.push(mainInterval);
-    
-    // Yedek interval (farklı zamanlama)
-    const backupInterval = setInterval(fetchLivePrice, refreshInterval + 100);
-    intervals.push(backupInterval);
-    
-    // Daha sık kontrol (her 2 saniyede)
-    const fastInterval = setInterval(() => {
-      if (document.visibilityState === 'visible') {
-        fetchLivePrice();
-      }
-    }, 2000);
-    intervals.push(fastInterval);
-
-    // Her saniye kontrol (en agresif)
-    const aggressiveInterval = setInterval(() => {
-      if (document.visibilityState === 'visible' && document.hasFocus()) {
-        fetchLivePrice();
-      }
-    }, 1000);
-    intervals.push(aggressiveInterval);
-
-    console.log('⏰ Multiple intervals set');
-
-    // Sayfa görünür olduğunda da güncelle
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') {
-        console.log('👁️ Page became visible, fetching price...');
-        fetchLivePrice();
-      }
-    };
-
-    // Focus/blur event'leri
-    const handleFocus = () => {
-      console.log('🎯 Window focused, fetching price...');
-      fetchLivePrice();
-    };
-
-    const handleBlur = () => {
-      console.log('👻 Window blurred');
-    };
-
-    // Mouse move event'i (kullanıcı aktif olduğunu gösterir)
-    const handleMouseMove = () => {
-      // Mouse hareketi varsa fiyatı güncelle
-      if (Date.now() - lastFetchTime > refreshInterval) {
-        fetchLivePrice();
-      }
-    };
-
-    // Key press event'i
-    const handleKeyPress = () => {
-      if (Date.now() - lastFetchTime > refreshInterval) {
-        fetchLivePrice();
-      }
-    };
-
-    // Scroll event'i
-    const handleScroll = () => {
-      if (Date.now() - lastFetchTime > refreshInterval) {
-        fetchLivePrice();
-      }
-    };
-
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    window.addEventListener('focus', handleFocus);
-    window.addEventListener('blur', handleBlur);
-    document.addEventListener('mousemove', handleMouseMove);
-    document.addEventListener('keypress', handleKeyPress);
-    document.addEventListener('scroll', handleScroll);
+    // Tek bir interval kullan
+    const interval = setInterval(fetchLivePrice, refreshInterval);
 
     return () => {
-      console.log('🧹 All intervals cleared');
-      intervals.forEach(clearInterval);
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-      window.removeEventListener('focus', handleFocus);
-      window.removeEventListener('blur', handleBlur);
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('keypress', handleKeyPress);
-      document.removeEventListener('scroll', handleScroll);
+      console.log('🧹 Live price interval cleared');
+      clearInterval(interval);
     };
-  }, [refreshInterval, lastFetchTime]);
+  }, [refreshInterval]);
 
   return {
     currentPrice,
@@ -174,9 +94,8 @@ export default function Dashboard() {
   const [refreshing, setRefreshing] = useState(false);
   const [fetchingData, setFetchingData] = useState(false);
 
-
-  // Canlı fiyat hook'u - her 5 saniyede bir güncelleme
-  const { currentPrice: livePrice, lastUpdated: liveLastUpdated, isLoading: liveLoading, error: liveError, updateCount, refresh: refreshLivePrice } = useLivePrice(5000);
+  // Canlı fiyat hook'u - her 10 saniyede bir güncelleme
+  const { currentPrice: livePrice, lastUpdated: liveLastUpdated, isLoading: liveLoading, error: liveError, updateCount, refresh: refreshLivePrice } = useLivePrice(10000);
 
   const fetchDashboardData = async () => {
     try {
