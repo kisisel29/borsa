@@ -36,5 +36,5 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# proxy server
-proxy-server.js
+# proxy server (temporary, uncomment if needed)
+# proxy-server.js
