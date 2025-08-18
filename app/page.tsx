@@ -28,19 +28,16 @@ interface DashboardData {
   lastUpdated: string;
 }
 
-// Basitleştirilmiş canlı veri hook'u
-function useLivePrice(refreshInterval = 10000) {
+export default function Dashboard() {
+  const [data, setData] = useState<DashboardData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [fetchingData, setFetchingData] = useState(false);
   const [currentPrice, setCurrentPrice] = useState<number | null>(null);
   const [lastUpdated, setLastUpdated] = useState<string>('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [updateCount, setUpdateCount] = useState(0);
 
   const fetchLivePrice = async () => {
     try {
-      setIsLoading(true);
-      setError(null);
-      
       console.log('🔄 Fetching live price...');
       const response = await fetch('/api/fetch-data');
       const result = await response.json();
@@ -49,53 +46,16 @@ function useLivePrice(refreshInterval = 10000) {
         console.log('✅ Live price updated:', result.data.currentPrice);
         setCurrentPrice(result.data.currentPrice);
         setLastUpdated(result.data.lastUpdated);
-        setUpdateCount(prev => prev + 1);
+        toast.success('Price updated successfully!');
       } else {
         console.log('❌ Live price error:', result.error);
-        setError(result.error || 'Veri çekilemedi');
+        toast.error('Failed to fetch price data');
       }
     } catch (err) {
       console.log('❌ Live price fetch failed:', err);
-      setError('Bağlantı hatası');
-      console.error('Live price fetch error:', err);
-    } finally {
-      setIsLoading(false);
+      toast.error('Connection error');
     }
   };
-
-  useEffect(() => {
-    console.log('🚀 Live price hook initialized, interval:', refreshInterval);
-    
-    // İlk yükleme
-    fetchLivePrice();
-
-    // Tek bir interval kullan
-    const interval = setInterval(fetchLivePrice, refreshInterval);
-
-    return () => {
-      console.log('🧹 Live price interval cleared');
-      clearInterval(interval);
-    };
-  }, [refreshInterval]);
-
-  return {
-    currentPrice,
-    lastUpdated,
-    isLoading,
-    error,
-    updateCount,
-    refresh: fetchLivePrice,
-  };
-}
-
-export default function Dashboard() {
-  const [data, setData] = useState<DashboardData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [fetchingData, setFetchingData] = useState(false);
-
-  // Canlı fiyat hook'u - her 10 saniyede bir güncelleme
-  const { currentPrice: livePrice, lastUpdated: liveLastUpdated, isLoading: liveLoading, error: liveError, updateCount, refresh: refreshLivePrice } = useLivePrice(10000);
 
   const fetchDashboardData = async () => {
     try {
@@ -110,6 +70,11 @@ export default function Dashboard() {
       
       if (result.success) {
         setData(result.data);
+        // Dashboard'dan gelen fiyatı da set et
+        if (!currentPrice) {
+          setCurrentPrice(result.data.currentPrice);
+          setLastUpdated(result.data.lastUpdated);
+        }
       } else {
         throw new Error(result.error || 'Unknown error');
       }
@@ -125,7 +90,7 @@ export default function Dashboard() {
   const fetchMarketData = async () => {
     try {
       setFetchingData(true);
-      await refreshLivePrice(); // Canlı veriyi manuel olarak yenile
+      await fetchLivePrice(); // Canlı veriyi manuel olarak yenile
       await fetchDashboardData(); // Dashboard'u yenile
       toast.success('Market data updated!');
     } catch (error) {
@@ -162,18 +127,7 @@ export default function Dashboard() {
   useEffect(() => {
     console.log('🏠 Dashboard component mounted');
     fetchDashboardData();
-    
-    // Auto-refresh every 30 seconds
-    const interval = setInterval(fetchDashboardData, 30000);
-    return () => clearInterval(interval);
   }, []);
-
-  // Debug: Live price değişikliklerini izle
-  useEffect(() => {
-    if (livePrice) {
-      console.log('💰 Live price changed to:', livePrice);
-    }
-  }, [livePrice]);
 
   if (loading) {
     return (
@@ -201,10 +155,10 @@ export default function Dashboard() {
   }
 
   // Canlı fiyatı kullan, yoksa dashboard verisini kullan
-  const displayPrice = livePrice || data.currentPrice;
-  const displayLastUpdated = liveLastUpdated || data.lastUpdated;
+  const displayPrice = currentPrice || data.currentPrice;
+  const displayLastUpdated = lastUpdated || data.lastUpdated;
 
-  console.log('🎯 Display price:', displayPrice, 'Live price:', livePrice, 'Data price:', data.currentPrice, 'Update count:', updateCount);
+  console.log('🎯 Display price:', displayPrice, 'Current price:', currentPrice, 'Data price:', data.currentPrice);
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -223,18 +177,29 @@ export default function Dashboard() {
           <div className="flex items-center space-x-3">
             <div className="text-sm text-muted-foreground">
               Last updated: {new Date(displayLastUpdated).toLocaleTimeString()}
-              {liveLoading && <span className="ml-2 text-blue-500">🔄</span>}
-              <span className="ml-2 text-green-500">Updates: {updateCount}</span>
+              {currentPrice && currentPrice !== data.currentPrice && (
+                <span className="ml-2 text-green-500">🔄 Live</span>
+              )}
             </div>
             <Button
-              onClick={fetchMarketData}
+              onClick={fetchLivePrice}
               disabled={fetchingData}
               variant="default"
               size="sm"
               className="bg-green-600 hover:bg-green-700"
             >
               <Download className={`h-4 w-4 mr-2 ${fetchingData ? 'animate-spin' : ''}`} />
-              {fetchingData ? 'Fetching...' : 'Fetch Data'}
+              {fetchingData ? 'Fetching...' : 'Fetch Price'}
+            </Button>
+            <Button
+              onClick={fetchMarketData}
+              disabled={fetchingData}
+              variant="default"
+              size="sm"
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              <RefreshCw className={`h-4 w-4 mr-2 ${fetchingData ? 'animate-spin' : ''}`} />
+              {fetchingData ? 'Updating...' : 'Update All'}
             </Button>
             <Button
               onClick={async () => {
@@ -253,7 +218,7 @@ export default function Dashboard() {
               }}
               variant="outline"
               size="sm"
-              className="bg-blue-600 hover:bg-blue-700 text-white"
+              className="bg-purple-600 hover:bg-purple-700 text-white"
             >
               Generate Signal
             </Button>
@@ -278,7 +243,7 @@ export default function Dashboard() {
                 ${displayPrice.toLocaleString()}
               </div>
               <div className="text-sm opacity-80">{data.symbol}</div>
-              {livePrice && livePrice !== data.currentPrice && (
+              {currentPrice && currentPrice !== data.currentPrice && (
                 <div className="text-xs text-green-200 mt-1">
                   🔄 Live Update
                 </div>
