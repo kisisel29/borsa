@@ -9,15 +9,21 @@ export async function GET() {
     
     const symbol = env.SYMBOL.replace('/', '');
     const proxyUrl = 'http://localhost:3004/api/binance';
-    const url = `${proxyUrl}/api/v3/ticker/24hr?symbol=${symbol}`;
+    // Timestamp ekleyerek cache'i bypass et
+    const timestamp = Date.now();
+    const url = `${proxyUrl}/api/v3/ticker/24hr?symbol=${symbol}&timestamp=${timestamp}`;
     
     console.log('Fetching from:', url);
     
     const response = await fetch(url, {
       method: 'GET',
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-      }
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0'
+      },
+      cache: 'no-store'
     });
     
     if (!response.ok) {

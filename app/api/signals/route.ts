@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { StrategyEngine } from '@/services/strategyEngine';
 import { DataService } from '@/services/dataService';
 import { getEnv } from '@/lib/env';
-// import { logger } from '@/lib/logger';
+import { logger } from '@/lib/logger';
 import { prisma } from '@/lib/prisma';
 
 export async function GET() {
@@ -52,12 +52,12 @@ export async function GET() {
         },
       });
     } catch (dbError) {
-      logger.warn('Could not store signal in database:', dbError);
+      console.warn('Could not store signal in database:', dbError);
     }
 
     await dataService.cleanup();
 
-    logger.info(`Signal generated: ${signal.action} at ${currentPrice} (confidence: ${signal.confidence})`);
+    console.log(`Signal generated: ${signal.action} at ${currentPrice} (confidence: ${signal.confidence})`);
 
     return NextResponse.json({
       success: true,
@@ -70,7 +70,7 @@ export async function GET() {
     });
 
   } catch (error) {
-    logger.error('Signal generation error:', error);
+    console.error('Signal generation error:', error);
     return NextResponse.json(
       { error: 'Failed to generate signal', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
