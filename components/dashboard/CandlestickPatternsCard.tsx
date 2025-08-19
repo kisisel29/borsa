@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ArrowUp, ArrowDown, Circle, TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import { Timeframe } from './TimeframeSelector';
 
 interface Pattern {
   pattern: string;
@@ -15,16 +16,17 @@ interface Pattern {
 
 interface CandlestickPatternsCardProps {
   currentPrice?: number;
+  timeframe?: Timeframe;
 }
 
-export function CandlestickPatternsCard({ currentPrice }: CandlestickPatternsCardProps) {
+export function CandlestickPatternsCard({ currentPrice, timeframe = '5m' }: CandlestickPatternsCardProps) {
   const [patterns, setPatterns] = useState<Pattern[]>([]);
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState<string>('');
 
   const fetchPatterns = async () => {
     try {
-      const response = await fetch('/api/patterns');
+      const response = await fetch(`/api/patterns?timeframe=${timeframe}`);
       const result = await response.json();
       
       if (result.success) {
@@ -47,7 +49,7 @@ export function CandlestickPatternsCard({ currentPrice }: CandlestickPatternsCar
     const interval = setInterval(fetchPatterns, 3000);
     
     return () => clearInterval(interval);
-  }, []);
+  }, [timeframe]); // timeframe değiştiğinde yeniden fetch et
 
   const getSignalIcon = (signal: string) => {
     switch (signal) {
@@ -98,7 +100,7 @@ export function CandlestickPatternsCard({ currentPrice }: CandlestickPatternsCar
     return (
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">Candlestick Patterns</CardTitle>
+          <CardTitle className="text-lg">Candlestick Patterns ({timeframe})</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="text-center text-muted-foreground">
@@ -113,7 +115,7 @@ export function CandlestickPatternsCard({ currentPrice }: CandlestickPatternsCar
     <Card>
       <CardHeader>
         <CardTitle className="text-lg flex items-center justify-between">
-          <span>Candlestick Patterns</span>
+          <span>Candlestick Patterns ({timeframe})</span>
           <div className="text-xs text-muted-foreground">
             {lastUpdated && timeAgo(lastUpdated)}
           </div>
@@ -167,7 +169,7 @@ export function CandlestickPatternsCard({ currentPrice }: CandlestickPatternsCar
         {patterns.length > 0 && (
           <div className="pt-2 border-t">
             <div className="text-xs text-muted-foreground">
-              Based on IG's 16 candlestick patterns analysis
+              Based on IG's 16 candlestick patterns analysis for {timeframe}
             </div>
           </div>
         )}

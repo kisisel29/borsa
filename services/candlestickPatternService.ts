@@ -18,35 +18,51 @@ interface PatternResult {
 export class CandlestickPatternService {
   
   // Mum pattern'lerini tespit et - sadece tamamlanmış mumlar için
-  detectPatterns(candles: Candle[], currentTime?: number): PatternResult[] {
+  detectPatterns(candles: Candle[], timeframe: string = '5m', currentTime?: number): PatternResult[] {
     if (candles.length < 3) return [];
     
     const patterns: PatternResult[] = [];
+    
+    // Zaman dilimine göre mum süresini hesapla
+    const getCandleDuration = (tf: string): number => {
+      switch (tf) {
+        case '1m': return 1 * 60 * 1000;
+        case '5m': return 5 * 60 * 1000;
+        case '1h': return 60 * 60 * 1000;
+        case '4h': return 4 * 60 * 60 * 1000;
+        case '12h': return 12 * 60 * 60 * 1000;
+        case '1d': return 24 * 60 * 60 * 1000;
+        default: return 5 * 60 * 1000;
+      }
+    };
     
     // Sadece tamamlanmış mumları al (son mum henüz oluşuyorsa dahil etme)
     let completedCandles = candles;
     
     if (currentTime) {
-      // Son mumun tamamlanma zamanını hesapla (5 dakikalık mum için)
+      const candleDuration = getCandleDuration(timeframe);
       const lastCandleTime = candles[candles.length - 1].time;
-      const candleDuration = 5 * 60 * 1000; // 5 dakika
       const completionTime = lastCandleTime + candleDuration;
       
       // Eğer son mum henüz tamamlanmamışsa, onu hariç tut
       if (currentTime < completionTime) {
         completedCandles = candles.slice(0, -1);
-        console.log('🕐 Son mum henüz oluşuyor, pattern tespiti için bekleniyor...');
+        console.log(`🕐 Son ${timeframe} mum henüz oluşuyor, pattern tespiti için bekleniyor...`);
+        console.log(`⏰ Şu an: ${new Date(currentTime).toLocaleTimeString()}, Tamamlanma: ${new Date(completionTime).toLocaleTimeString()}`);
       }
     }
     
-    if (completedCandles.length < 3) return [];
+    if (completedCandles.length < 3) {
+      console.log(`📊 Yeterli tamamlanmış mum yok: ${completedCandles.length} mum`);
+      return [];
+    }
     
     // Son 3 tamamlanmış mum için pattern tespiti
     const last3 = completedCandles.slice(-3);
     const last2 = completedCandles.slice(-2);
     const last1 = completedCandles.slice(-1)[0];
     
-    console.log(`📊 Pattern tespiti: ${completedCandles.length} tamamlanmış mum, son mum: ${new Date(last1.time).toLocaleTimeString()}`);
+    console.log(`📊 ${timeframe} Pattern tespiti: ${completedCandles.length} tamamlanmış mum, son mum: ${new Date(last1.time).toLocaleTimeString()}`);
     
     // 1. Doji Pattern
     if (this.isDoji(last1)) {
@@ -224,7 +240,7 @@ export class CandlestickPatternService {
       });
     }
     
-    console.log(`🎯 ${patterns.length} pattern tespit edildi`);
+    console.log(`🎯 ${timeframe} için ${patterns.length} pattern tespit edildi`);
     return patterns;
   }
   

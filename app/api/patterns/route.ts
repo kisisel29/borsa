@@ -1,26 +1,67 @@
 import { NextResponse } from 'next/server';
 import { CandlestickPatternService } from '@/services/candlestickPatternService';
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    const { searchParams } = new URL(request.url);
+    const timeframe = searchParams.get('timeframe') || '5m';
     const symbol = 'ETH/USDT';
     const currentTime = Date.now();
     
-    console.log('Generating simulated candles for pattern detection');
+    console.log(`Generating simulated candles for ${timeframe} pattern detection`);
+    
+    // Zaman dilimine göre mum sayısını hesapla
+    const getCandleCount = (tf: string): number => {
+      switch (tf) {
+        case '1m': return 1440; // 24 saat
+        case '5m': return 288;  // 24 saat
+        case '1h': return 24;   // 24 saat
+        case '4h': return 6;    // 24 saat
+        case '12h': return 2;   // 24 saat
+        case '1d': return 1;    // 24 saat
+        default: return 288;
+      }
+    };
+
+    // Zaman dilimine göre mum süresini hesapla
+    const getCandleDuration = (tf: string): number => {
+      switch (tf) {
+        case '1m': return 1 * 60 * 1000;
+        case '5m': return 5 * 60 * 1000;
+        case '1h': return 60 * 60 * 1000;
+        case '4h': return 4 * 60 * 60 * 1000;
+        case '12h': return 12 * 60 * 60 * 1000;
+        case '1d': return 24 * 60 * 60 * 1000;
+        default: return 5 * 60 * 1000;
+      }
+    };
+    
+    const candleCount = getCandleCount(timeframe);
+    const candleDuration = getCandleDuration(timeframe);
     
     // Simüle edilmiş mum verileri oluştur
     const candles = [];
     const basePrice = 4250;
     const now = Date.now();
     
-    for (let i = 287; i >= 0; i--) {
-      const timestamp = now - (i * 5 * 60 * 1000);
-      const priceChange = (Math.random() - 0.5) * 100;
+    for (let i = candleCount - 1; i >= 0; i--) {
+      const timestamp = now - (i * candleDuration);
+      
+      // Daha gerçekçi fiyat hareketi - trend takibi
+      const trend = Math.sin(i * 0.1) * 50; // Yumuşak trend
+      const noise = (Math.random() - 0.5) * 20; // Küçük rastgele hareket
+      const priceChange = trend + noise;
+      
       const open = basePrice + priceChange;
-      const close = open + (Math.random() - 0.5) * 20;
-      const high = Math.max(open, close) + Math.random() * 15;
-      const low = Math.min(open, close) - Math.random() * 15;
-      const volume = Math.random() * 1000 + 100;
+      const close = open + (Math.random() - 0.5) * 10; // Küçük kapanış değişimi
+      
+      // High ve Low daha gerçekçi
+      const bodySize = Math.abs(close - open);
+      const high = Math.max(open, close) + Math.random() * bodySize * 0.5;
+      const low = Math.min(open, close) - Math.random() * bodySize * 0.5;
+      
+      // Volume daha gerçekçi
+      const volume = 500 + Math.random() * 1000;
       
       candles.push({
         time: timestamp,
@@ -34,9 +75,9 @@ export async function GET() {
     
     // Pattern servisini kullanarak pattern'leri tespit et
     const patternService = new CandlestickPatternService();
-    const patterns = patternService.detectPatterns(candles, currentTime);
+    const patterns = patternService.detectPatterns(candles, timeframe, currentTime);
     
-    console.log(`Detected ${patterns.length} candlestick patterns at ${new Date(currentTime).toLocaleTimeString()}`);
+    console.log(`Detected ${patterns.length} candlestick patterns for ${timeframe} at ${new Date(currentTime).toLocaleTimeString()}`);
     
     return NextResponse.json({
       success: true,
@@ -46,6 +87,7 @@ export async function GET() {
         completedCandles: patterns.length > 0 ? candles.length - 1 : candles.length, // Son mum henüz oluşuyorsa
         lastUpdated: new Date().toISOString(),
         currentTime: new Date(currentTime).toISOString(),
+        timeframe: timeframe,
       },
     });
 

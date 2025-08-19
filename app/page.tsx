@@ -388,7 +388,7 @@ export default function Dashboard() {
           </div>
           <div className="space-y-6">
             <SignalCard signal={latestSignal || data.latestSignal} currentPrice={displayPrice} />
-            <CandlestickPatternsCard currentPrice={displayPrice} />
+            <CandlestickPatternsCard currentPrice={displayPrice} timeframe={selectedTimeframe} />
             <PositionCard 
               positions={data.openPositions} 
               onClosePosition={handleClosePosition}
