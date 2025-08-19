@@ -37,6 +37,8 @@ export default function Dashboard() {
   const [lastUpdated, setLastUpdated] = useState<string>('');
   const [autoUpdate, setAutoUpdate] = useState(true);
   const [autoUpdateInterval, setAutoUpdateInterval] = useState<NodeJS.Timeout | null>(null);
+  const [latestSignal, setLatestSignal] = useState<any>(null);
+  const [lastSignalPrice, setLastSignalPrice] = useState<number | null>(null);
 
   const fetchLivePrice = async () => {
     try {
@@ -46,13 +48,38 @@ export default function Dashboard() {
       
       if (result.success) {
         console.log('✅ Live price updated:', result.data.currentPrice);
-        setCurrentPrice(result.data.currentPrice);
+        const newPrice = result.data.currentPrice;
+        setCurrentPrice(newPrice);
         setLastUpdated(result.data.lastUpdated);
+        
+        // Fiyat değiştiğinde sinyal üret
+        if (lastSignalPrice === null || Math.abs(newPrice - lastSignalPrice) > 5) {
+          generateSignal(newPrice);
+          setLastSignalPrice(newPrice);
+        }
       } else {
         console.log('❌ Live price error:', result.error);
       }
     } catch (err) {
       console.log('❌ Live price fetch failed:', err);
+    }
+  };
+
+  const generateSignal = async (price: number) => {
+    try {
+      console.log('🎯 Generating signal for price:', price);
+      const response = await fetch('/api/signals');
+      const result = await response.json();
+      
+      if (result.success) {
+        console.log('✅ Signal generated:', result.data.signal.action);
+        setLatestSignal(result.data.signal);
+        toast.success(`Signal: ${result.data.signal.action} at $${price.toFixed(2)}`);
+      } else {
+        console.log('❌ Signal generation failed:', result.error);
+      }
+    } catch (error) {
+      console.error('❌ Signal generation error:', error);
     }
   };
 
@@ -236,14 +263,8 @@ export default function Dashboard() {
             <Button
               onClick={async () => {
                 try {
-                  const response = await fetch('/api/signals');
-                  const result = await response.json();
-                  if (result.success) {
-                    toast.success(`Signal generated: ${result.data.signal.action}`);
-                    await fetchDashboardData();
-                  } else {
-                    toast.error('Failed to generate signal');
-                  }
+                  await generateSignal(displayPrice);
+                  await fetchDashboardData();
                 } catch (error) {
                   toast.error('Signal generation failed');
                 }
@@ -327,7 +348,7 @@ export default function Dashboard() {
             <CandlestickChart symbol={data.symbol} currentPrice={displayPrice} />
           </div>
           <div className="space-y-6">
-            <SignalCard signal={data.latestSignal} currentPrice={displayPrice} />
+            <SignalCard signal={latestSignal || data.latestSignal} currentPrice={displayPrice} />
             <PositionCard 
               positions={data.openPositions} 
               onClosePosition={handleClosePosition}
