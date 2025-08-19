@@ -8,9 +8,7 @@ export async function GET() {
     const env = getEnv();
     
     const symbol = env.SYMBOL.replace('/', '');
-    // Timestamp ekleyerek cache'i bypass et
-    const timestamp = Date.now();
-    const url = `https://api.binance.com/api/v3/ticker/24hr?symbol=${symbol}&timestamp=${timestamp}`;
+    const url = `https://api.binance.com/api/v3/ticker/24hr?symbol=${symbol}`;
     
     console.log('Fetching from:', url);
     

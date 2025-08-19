@@ -39,7 +39,7 @@ export default function Dashboard() {
   const fetchLivePrice = async () => {
     try {
       console.log('🔄 Fetching live price...');
-      const response = await fetch('/api/fetch-data');
+      const response = await fetch('/api/test-price');
       const result = await response.json();
       
       if (result.success) {
