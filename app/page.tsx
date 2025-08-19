@@ -44,7 +44,7 @@ export default function Dashboard() {
   const fetchLivePrice = async () => {
     try {
       console.log('🔄 Fetching live price...');
-      const response = await fetch('/api/test-price');
+      const response = await fetch('/api/test-price'); // Changed to /api/test-price
       const result = await response.json();
       
       if (result.success) {
@@ -60,13 +60,15 @@ export default function Dashboard() {
         }
       } else {
         console.log('❌ Live price error:', result.error);
+        // toast.error('Failed to fetch price data'); // Removed toast
       }
     } catch (err) {
       console.log('❌ Live price fetch failed:', err);
+      // toast.error('Connection error'); // Removed toast
     }
   };
 
-  const generateSignal = async (price: number) => {
+  const generateSignal = async (price: number) => { // New function
     try {
       console.log('🎯 Generating signal for price:', price);
       const response = await fetch('/api/signals');
@@ -75,12 +77,33 @@ export default function Dashboard() {
       if (result.success) {
         console.log('✅ Signal generated:', result.data.signal.action);
         setLatestSignal(result.data.signal);
-        // Toast bildirimini kaldırdım
+        // toast.success(`Signal: ${result.data.signal.action} at $${price.toFixed(2)}`); // Removed toast
       } else {
         console.log('❌ Signal generation failed:', result.error);
       }
     } catch (error) {
       console.error('❌ Signal generation error:', error);
+    }
+  };
+
+  // Mum verilerini ve pattern'leri güncelle
+  const updateCandlesAndPatterns = async () => {
+    try {
+      console.log('📊 Updating candles and patterns...');
+      
+      // Mum verilerini güncelle
+      const candlesResponse = await fetch('/api/candles');
+      if (candlesResponse.ok) {
+        console.log('✅ Candles updated');
+      }
+      
+      // Pattern'leri güncelle
+      const patternsResponse = await fetch('/api/patterns');
+      if (patternsResponse.ok) {
+        console.log('✅ Patterns updated');
+      }
+    } catch (error) {
+      console.error('❌ Failed to update candles/patterns:', error);
     }
   };
 
@@ -156,9 +179,12 @@ export default function Dashboard() {
   };
 
   // Otomatik fiyat güncellemesi
-  useEffect(() => {
+  useEffect(() => { // New useEffect for auto-update
     if (autoUpdate) {
-      const interval = setInterval(fetchLivePrice, 3000); // 3 saniyede bir
+      const interval = setInterval(async () => {
+        await fetchLivePrice();
+        await updateCandlesAndPatterns();
+      }, 3000); // 3 saniyede bir
       setAutoUpdateInterval(interval);
       
       return () => {

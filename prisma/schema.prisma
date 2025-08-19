@@ -82,6 +82,7 @@ model Signal {
   symbol    String
   action    String   // "BUY" | "SELL" | "HOLD"
   price     Float
+  confidence Float?  // Sinyal güvenilirliği (0-100)
   timestamp DateTime
   emaFast   Float?
   emaSlow   Float?

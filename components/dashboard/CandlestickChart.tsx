@@ -1,8 +1,12 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { createChart, IChartApi, ISeriesApi, LineStyle, ColorType } from 'lightweight-charts';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { createChart, ColorType, LineStyle } from 'lightweight-charts';
+
+interface CandlestickChartProps {
+  symbol: string;
+  currentPrice: number | null;
+}
 
 interface Candle {
   time: number;
@@ -13,44 +17,75 @@ interface Candle {
   volume: number;
 }
 
-interface CandlestickChartProps {
-  symbol: string;
-  currentPrice?: number;
-}
-
 export function CandlestickChart({ symbol, currentPrice }: CandlestickChartProps) {
   const chartContainerRef = useRef<HTMLDivElement>(null);
-  const chartRef = useRef<IChartApi | null>(null);
-  const candlestickSeriesRef = useRef<ISeriesApi<'Candlestick'> | null>(null);
+  const chartRef = useRef<any>(null);
+  const candlestickSeriesRef = useRef<any>(null);
   const [candles, setCandles] = useState<Candle[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
 
-  const fetchCandles = async () => {
-    try {
-      const response = await fetch('/api/candles');
-      const result = await response.json();
-      
-      if (result.success) {
-        setCandles(result.data.candles);
-      } else {
-        console.error('Failed to fetch candles:', result.error);
-      }
-    } catch (error) {
-      console.error('Error fetching candles:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
+  // Her 3 saniyede bir mum verilerini güncelle
   useEffect(() => {
+    const fetchCandles = async () => {
+      try {
+        console.log('🔄 Fetching candlestick data...');
+        const response = await fetch('/api/candles');
+        const result = await response.json();
+        
+        if (result.success) {
+          console.log('✅ Candles updated:', result.data.candles.length, 'candles');
+          setCandles(result.data.candles);
+          setLastUpdate(new Date());
+          setLoading(false);
+          setError(null);
+          
+          // Mum verileri güncellendiğinde sinyal ve pattern'leri de güncelle
+          await updateSignalsAndPatterns();
+        } else {
+          console.log('❌ Candles error:', result.error);
+          setError(result.error);
+          setLoading(false);
+        }
+      } catch (err) {
+        console.log('❌ Candles fetch failed:', err);
+        setError('Failed to fetch candlestick data');
+        setLoading(false);
+      }
+    };
+
+    // İlk yükleme
     fetchCandles();
-    
-    // 3 saniyede bir mum verilerini güncelle
+
+    // Her 3 saniyede bir güncelle
     const interval = setInterval(fetchCandles, 3000);
-    
+
     return () => clearInterval(interval);
   }, []);
 
+  // Sinyal ve pattern güncelleme fonksiyonu
+  const updateSignalsAndPatterns = async () => {
+    try {
+      console.log('🎯 Updating signals and patterns...');
+      
+      // Sinyal güncelle
+      const signalResponse = await fetch('/api/signals');
+      if (signalResponse.ok) {
+        console.log('✅ Signal updated');
+      }
+      
+      // Pattern güncelle
+      const patternResponse = await fetch('/api/patterns');
+      if (patternResponse.ok) {
+        console.log('✅ Patterns updated');
+      }
+    } catch (error) {
+      console.error('❌ Failed to update signals/patterns:', error);
+    }
+  };
+
+  // Grafik oluşturma ve güncelleme
   useEffect(() => {
     if (!chartContainerRef.current || candles.length === 0) return;
 
@@ -173,9 +208,9 @@ export function CandlestickChart({ symbol, currentPrice }: CandlestickChartProps
     };
   }, [candles]);
 
-  // Canlı fiyat güncellemesi için son mumu güncelle
+  // Son mumu güncel fiyatla güncelle
   useEffect(() => {
-    if (currentPrice && candlestickSeriesRef.current && candles.length > 0) {
+    if (candlestickSeriesRef.current && currentPrice && candles.length > 0) {
       const lastCandle = candles[candles.length - 1];
       const updatedCandle = {
         time: lastCandle.time / 1000 as any,
@@ -191,42 +226,56 @@ export function CandlestickChart({ symbol, currentPrice }: CandlestickChartProps
 
   if (loading) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">{symbol} 5m Candlesticks (24h)</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="h-[400px] flex items-center justify-center text-muted-foreground">
-            Loading candlestick data...
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+            {symbol} 5m Candlesticks (24h)
+          </h3>
+          <div className="text-sm text-gray-500">
+            Loading...
           </div>
-        </CardContent>
-      </Card>
+        </div>
+        <div className="h-96 flex items-center justify-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+        </div>
+      </div>
     );
   }
 
-  if (candles.length === 0) {
+  if (error) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">{symbol} 5m Candlesticks (24h)</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="h-[400px] flex items-center justify-center text-muted-foreground">
-            No candlestick data available
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+            {symbol} 5m Candlesticks (24h)
+          </h3>
+          <div className="text-sm text-red-500">
+            Error: {error}
           </div>
-        </CardContent>
-      </Card>
+        </div>
+        <div className="h-96 flex items-center justify-center">
+          <div className="text-red-500">Failed to load chart data</div>
+        </div>
+      </div>
     );
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-lg">{symbol} 5m Candlesticks (24h)</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div ref={chartContainerRef} className="w-full" />
-      </CardContent>
-    </Card>
+    <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+          {symbol} 5m Candlesticks (24h)
+        </h3>
+        <div className="text-sm text-gray-500">
+          Last update: {lastUpdate.toLocaleTimeString()}
+          {currentPrice && (
+            <span className="ml-2 text-green-500">
+              Current: ${currentPrice.toFixed(2)}
+            </span>
+          )}
+        </div>
+      </div>
+      <div ref={chartContainerRef} className="w-full h-96" />
+    </div>
   );
 }
