@@ -4,10 +4,10 @@ import { useEffect, useState } from 'react';
 import { MetricCard } from '@/components/dashboard/MetricCard';
 import { SignalCard } from '@/components/dashboard/SignalCard';
 import { PositionCard } from '@/components/dashboard/PositionCard';
-import { PriceChart } from '@/components/dashboard/PriceChart';
+import { CandlestickChart } from '@/components/dashboard/CandlestickChart';
 import { TradesTable } from '@/components/dashboard/TradesTable';
 import { Button } from '@/components/ui/button';
-import { RefreshCw, TrendingUp, Download } from 'lucide-react';
+import { RefreshCw, TrendingUp, Download, Play, Pause } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface DashboardData {
@@ -35,6 +35,8 @@ export default function Dashboard() {
   const [fetchingData, setFetchingData] = useState(false);
   const [currentPrice, setCurrentPrice] = useState<number | null>(null);
   const [lastUpdated, setLastUpdated] = useState<string>('');
+  const [autoUpdate, setAutoUpdate] = useState(true);
+  const [autoUpdateInterval, setAutoUpdateInterval] = useState<NodeJS.Timeout | null>(null);
 
   const fetchLivePrice = async () => {
     try {
@@ -46,14 +48,11 @@ export default function Dashboard() {
         console.log('✅ Live price updated:', result.data.currentPrice);
         setCurrentPrice(result.data.currentPrice);
         setLastUpdated(result.data.lastUpdated);
-        toast.success('Price updated successfully!');
       } else {
         console.log('❌ Live price error:', result.error);
-        toast.error('Failed to fetch price data');
       }
     } catch (err) {
       console.log('❌ Live price fetch failed:', err);
-      toast.error('Connection error');
     }
   };
 
@@ -107,6 +106,10 @@ export default function Dashboard() {
     toast.success('Dashboard refreshed');
   };
 
+  const toggleAutoUpdate = () => {
+    setAutoUpdate(!autoUpdate);
+  };
+
   const handleClosePosition = async (positionId: string) => {
     try {
       const response = await fetch(`/api/positions/${positionId}/close`, {
@@ -123,6 +126,23 @@ export default function Dashboard() {
       toast.error('Failed to close position');
     }
   };
+
+  // Otomatik fiyat güncellemesi
+  useEffect(() => {
+    if (autoUpdate) {
+      const interval = setInterval(fetchLivePrice, 3000); // 3 saniyede bir
+      setAutoUpdateInterval(interval);
+      
+      return () => {
+        if (interval) clearInterval(interval);
+      };
+    } else {
+      if (autoUpdateInterval) {
+        clearInterval(autoUpdateInterval);
+        setAutoUpdateInterval(null);
+      }
+    }
+  }, [autoUpdate]);
 
   useEffect(() => {
     console.log('🏠 Dashboard component mounted');
@@ -180,7 +200,19 @@ export default function Dashboard() {
               {currentPrice && currentPrice !== data.currentPrice && (
                 <span className="ml-2 text-green-500">🔄 Live</span>
               )}
+              {autoUpdate && (
+                <span className="ml-2 text-blue-500">⏱️ Auto</span>
+              )}
             </div>
+            <Button
+              onClick={toggleAutoUpdate}
+              variant="outline"
+              size="sm"
+              className={autoUpdate ? "bg-green-600 hover:bg-green-700 text-white" : ""}
+            >
+              {autoUpdate ? <Pause className="h-4 w-4 mr-2" /> : <Play className="h-4 w-4 mr-2" />}
+              {autoUpdate ? 'Auto On' : 'Auto Off'}
+            </Button>
             <Button
               onClick={fetchLivePrice}
               disabled={fetchingData}
@@ -292,7 +324,7 @@ export default function Dashboard() {
         {/* Chart and Signals */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2">
-            <PriceChart data={data.chartData} symbol={data.symbol} currentPrice={displayPrice} />
+            <CandlestickChart symbol={data.symbol} currentPrice={displayPrice} />
           </div>
           <div className="space-y-6">
             <SignalCard signal={data.latestSignal} currentPrice={displayPrice} />
