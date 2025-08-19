@@ -75,7 +75,7 @@ export default function Dashboard() {
       if (result.success) {
         console.log('✅ Signal generated:', result.data.signal.action);
         setLatestSignal(result.data.signal);
-        toast.success(`Signal: ${result.data.signal.action} at $${price.toFixed(2)}`);
+        // Toast bildirimini kaldırdım
       } else {
         console.log('❌ Signal generation failed:', result.error);
       }

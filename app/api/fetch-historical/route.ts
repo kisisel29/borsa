@@ -1,46 +1,58 @@
 import { NextResponse } from 'next/server';
-import { DataService } from '@/services/dataService';
 import { getEnv } from '@/lib/env';
 
 export async function POST(request: Request) {
   try {
-    const env = getEnv();
-    const { symbol = env.SYMBOL, timeframe = env.TIMEFRAME, limit = 1000 } = await request.json();
+    const body = await request.json();
+    const { symbol = 'ETH/USDT', timeframe = '1h', limit = 1000 } = body;
+
+    console.log('Fetching historical data:', { symbol, timeframe, limit });
+
+    const symbolFormatted = symbol.replace('/', '');
+    const url = `https://api.binance.com/api/v3/klines?symbol=${symbolFormatted}&interval=${timeframe}&limit=${limit}`;
     
-    console.log(`Fetching historical data for ${symbol} ${timeframe}, limit: ${limit}`);
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0'
+      },
+      cache: 'no-store'
+    });
     
-    const dataService = new DataService();
-    
-    // Fetch historical data
-    const candles = await dataService.fetchLatestCandles(symbol, timeframe, limit);
-    
-    if (candles.length === 0) {
-      return NextResponse.json(
-        { error: 'No historical data available' },
-        { status: 400 }
-      );
+    if (!response.ok) {
+      throw new Error(`API error: ${response.status}`);
     }
     
-    // Store candles
-    await dataService.storeCandles(candles, symbol, timeframe);
+    const data = await response.json();
     
-    await dataService.cleanup();
+    // Mum verilerini dönüştür
+    const candles = data.map((candle: any) => ({
+      time: candle[0], // timestamp
+      open: parseFloat(candle[1]),
+      high: parseFloat(candle[2]),
+      low: parseFloat(candle[3]),
+      close: parseFloat(candle[4]),
+      volume: parseFloat(candle[5])
+    }));
     
-    console.log(`Successfully stored ${candles.length} candles for ${symbol} ${timeframe}`);
+    console.log(`Fetched ${candles.length} historical candles`);
     
     return NextResponse.json({
       success: true,
       data: {
+        candles,
         candlesCount: candles.length,
         symbol,
         timeframe,
-        firstCandle: candles[0],
-        lastCandle: candles[candles.length - 1],
+        lastUpdated: new Date().toISOString(),
       },
     });
-    
+
   } catch (error) {
-    console.error('Historical data fetch error:', error);
+    console.error('Fetch historical API error:', error);
     return NextResponse.json(
       { error: 'Failed to fetch historical data', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
