@@ -6,6 +6,7 @@ import { SignalCard } from '@/components/dashboard/SignalCard';
 import { PositionCard } from '@/components/dashboard/PositionCard';
 import { CandlestickChart } from '@/components/dashboard/CandlestickChart';
 import { CandlestickPatternsCard } from '@/components/dashboard/CandlestickPatternsCard';
+import { TimeframeSelector, Timeframe } from '@/components/dashboard/TimeframeSelector';
 import { TradesTable } from '@/components/dashboard/TradesTable';
 import { Button } from '@/components/ui/button';
 import { RefreshCw, TrendingUp, Download, Play, Pause } from 'lucide-react';
@@ -40,6 +41,7 @@ export default function Dashboard() {
   const [autoUpdateInterval, setAutoUpdateInterval] = useState<NodeJS.Timeout | null>(null);
   const [latestSignal, setLatestSignal] = useState<any>(null);
   const [lastSignalPrice, setLastSignalPrice] = useState<number | null>(null);
+  const [selectedTimeframe, setSelectedTimeframe] = useState<Timeframe>('5m');
 
   const fetchLivePrice = async () => {
     try {
@@ -369,10 +371,20 @@ export default function Dashboard() {
           />
         </div>
 
+        {/* Timeframe Selector */}
+        <TimeframeSelector 
+          selectedTimeframe={selectedTimeframe}
+          onTimeframeChange={setSelectedTimeframe}
+        />
+
         {/* Chart and Signals */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2">
-            <CandlestickChart symbol={data.symbol} currentPrice={displayPrice} />
+            <CandlestickChart 
+              symbol={data.symbol} 
+              currentPrice={displayPrice} 
+              timeframe={selectedTimeframe}
+            />
           </div>
           <div className="space-y-6">
             <SignalCard signal={latestSignal || data.latestSignal} currentPrice={displayPrice} />

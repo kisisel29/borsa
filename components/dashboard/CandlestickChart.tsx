@@ -2,10 +2,12 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { createChart, ColorType, LineStyle } from 'lightweight-charts';
+import { Timeframe } from './TimeframeSelector';
 
 interface CandlestickChartProps {
   symbol: string;
   currentPrice: number | null;
+  timeframe: Timeframe;
 }
 
 interface Candle {
@@ -17,27 +19,53 @@ interface Candle {
   volume: number;
 }
 
-export function CandlestickChart({ symbol, currentPrice }: CandlestickChartProps) {
+export function CandlestickChart({ symbol, currentPrice, timeframe }: CandlestickChartProps) {
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<any>(null);
   const candlestickSeriesRef = useRef<any>(null);
   const [candles, setCandles] = useState<Candle[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
+  const [lastUpdate, setLastUpdated] = useState<Date>(new Date());
+
+  // Zaman dilimine göre mum süresini hesapla
+  const getCandleDuration = (tf: Timeframe): number => {
+    switch (tf) {
+      case '1m': return 1 * 60 * 1000;
+      case '5m': return 5 * 60 * 1000;
+      case '1h': return 60 * 60 * 1000;
+      case '4h': return 4 * 60 * 60 * 1000;
+      case '12h': return 12 * 60 * 60 * 1000;
+      case '1d': return 24 * 60 * 60 * 1000;
+      default: return 5 * 60 * 1000;
+    }
+  };
+
+  // Zaman dilimine göre mum sayısını hesapla
+  const getCandleCount = (tf: Timeframe): number => {
+    switch (tf) {
+      case '1m': return 1440; // 24 saat
+      case '5m': return 288;  // 24 saat
+      case '1h': return 24;   // 24 saat
+      case '4h': return 6;    // 24 saat
+      case '12h': return 2;   // 24 saat
+      case '1d': return 1;    // 24 saat
+      default: return 288;
+    }
+  };
 
   // Her 3 saniyede bir mum verilerini güncelle
   useEffect(() => {
     const fetchCandles = async () => {
       try {
-        console.log('🔄 Fetching candlestick data...');
-        const response = await fetch('/api/candles');
+        console.log(`🔄 Fetching candlestick data for ${timeframe}...`);
+        const response = await fetch(`/api/candles?timeframe=${timeframe}`);
         const result = await response.json();
         
         if (result.success) {
-          console.log('✅ Candles updated:', result.data.candles.length, 'candles');
+          console.log(`✅ Candles updated for ${timeframe}:`, result.data.candles.length, 'candles');
           setCandles(result.data.candles);
-          setLastUpdate(new Date());
+          setLastUpdated(new Date());
           setLoading(false);
           setError(null);
           
@@ -62,7 +90,7 @@ export function CandlestickChart({ symbol, currentPrice }: CandlestickChartProps
     const interval = setInterval(fetchCandles, 3000);
 
     return () => clearInterval(interval);
-  }, []);
+  }, [timeframe]);
 
   // Sinyal ve pattern güncelleme fonksiyonu
   const updateSignalsAndPatterns = async () => {
@@ -229,7 +257,7 @@ export function CandlestickChart({ symbol, currentPrice }: CandlestickChartProps
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-            {symbol} 5m Candlesticks (24h)
+            {symbol} {timeframe} Candlesticks (24h)
           </h3>
           <div className="text-sm text-gray-500">
             Loading...
@@ -247,7 +275,7 @@ export function CandlestickChart({ symbol, currentPrice }: CandlestickChartProps
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-            {symbol} 5m Candlesticks (24h)
+            {symbol} {timeframe} Candlesticks (24h)
           </h3>
           <div className="text-sm text-red-500">
             Error: {error}
@@ -264,7 +292,7 @@ export function CandlestickChart({ symbol, currentPrice }: CandlestickChartProps
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-          {symbol} 5m Candlesticks (24h)
+          {symbol} {timeframe} Candlesticks (24h)
         </h3>
         <div className="text-sm text-gray-500">
           Last update: {lastUpdate.toLocaleTimeString()}

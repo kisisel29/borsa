@@ -17,16 +17,36 @@ interface PatternResult {
 
 export class CandlestickPatternService {
   
-  // Mum pattern'lerini tespit et
-  detectPatterns(candles: Candle[]): PatternResult[] {
+  // Mum pattern'lerini tespit et - sadece tamamlanmış mumlar için
+  detectPatterns(candles: Candle[], currentTime?: number): PatternResult[] {
     if (candles.length < 3) return [];
     
     const patterns: PatternResult[] = [];
     
-    // Son 3 mum için pattern tespiti
-    const last3 = candles.slice(-3);
-    const last2 = candles.slice(-2);
-    const last1 = candles.slice(-1)[0];
+    // Sadece tamamlanmış mumları al (son mum henüz oluşuyorsa dahil etme)
+    let completedCandles = candles;
+    
+    if (currentTime) {
+      // Son mumun tamamlanma zamanını hesapla (5 dakikalık mum için)
+      const lastCandleTime = candles[candles.length - 1].time;
+      const candleDuration = 5 * 60 * 1000; // 5 dakika
+      const completionTime = lastCandleTime + candleDuration;
+      
+      // Eğer son mum henüz tamamlanmamışsa, onu hariç tut
+      if (currentTime < completionTime) {
+        completedCandles = candles.slice(0, -1);
+        console.log('🕐 Son mum henüz oluşuyor, pattern tespiti için bekleniyor...');
+      }
+    }
+    
+    if (completedCandles.length < 3) return [];
+    
+    // Son 3 tamamlanmış mum için pattern tespiti
+    const last3 = completedCandles.slice(-3);
+    const last2 = completedCandles.slice(-2);
+    const last1 = completedCandles.slice(-1)[0];
+    
+    console.log(`📊 Pattern tespiti: ${completedCandles.length} tamamlanmış mum, son mum: ${new Date(last1.time).toLocaleTimeString()}`);
     
     // 1. Doji Pattern
     if (this.isDoji(last1)) {
@@ -128,7 +148,7 @@ export class CandlestickPatternService {
     }
     
     // 10. Three White Soldiers
-    if (this.hasThreeWhiteSoldiers(candles.slice(-3))) {
+    if (this.hasThreeWhiteSoldiers(last3)) {
       patterns.push({
         pattern: 'Three White Soldiers',
         confidence: 0.8,
@@ -139,7 +159,7 @@ export class CandlestickPatternService {
     }
     
     // 11. Three Black Crows
-    if (this.hasThreeBlackCrows(candles.slice(-3))) {
+    if (this.hasThreeBlackCrows(last3)) {
       patterns.push({
         pattern: 'Three Black Crows',
         confidence: 0.8,
@@ -204,6 +224,7 @@ export class CandlestickPatternService {
       });
     }
     
+    console.log(`🎯 ${patterns.length} pattern tespit edildi`);
     return patterns;
   }
   

@@ -6,6 +6,7 @@ export async function GET() {
   try {
     const env = getEnv();
     const symbol = env.SYMBOL.replace('/', '');
+    const currentTime = Date.now();
     
     console.log('Generating simulated candles for pattern detection');
     
@@ -35,16 +36,18 @@ export async function GET() {
     
     // Pattern servisini kullanarak pattern'leri tespit et
     const patternService = new CandlestickPatternService();
-    const patterns = patternService.detectPatterns(candles);
+    const patterns = patternService.detectPatterns(candles, currentTime);
     
-    console.log(`Detected ${patterns.length} candlestick patterns`);
+    console.log(`Detected ${patterns.length} candlestick patterns at ${new Date(currentTime).toLocaleTimeString()}`);
     
     return NextResponse.json({
       success: true,
       data: {
         patterns,
         totalCandles: candles.length,
+        completedCandles: patterns.length > 0 ? candles.length - 1 : candles.length, // Son mum henüz oluşuyorsa
         lastUpdated: new Date().toISOString(),
+        currentTime: new Date(currentTime).toISOString(),
       },
     });
 

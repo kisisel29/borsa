@@ -1,21 +1,51 @@
 import { NextResponse } from 'next/server';
 import { getEnv } from '@/lib/env';
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    const { searchParams } = new URL(request.url);
+    const timeframe = searchParams.get('timeframe') || '5m';
     const env = getEnv();
     const symbol = env.SYMBOL.replace('/', '');
     
-    console.log('Generating clean 5-minute candlestick data for:', symbol);
+    console.log(`Generating clean ${timeframe} candlestick data for:`, symbol);
     
-    // Son 24 saat için 5 dakikalık mum verisi (288 mum) - daha düzenli
+    // Zaman dilimine göre mum sayısını hesapla
+    const getCandleCount = (tf: string): number => {
+      switch (tf) {
+        case '1m': return 1440; // 24 saat
+        case '5m': return 288;  // 24 saat
+        case '1h': return 24;   // 24 saat
+        case '4h': return 6;    // 24 saat
+        case '12h': return 2;   // 24 saat
+        case '1d': return 1;    // 24 saat
+        default: return 288;
+      }
+    };
+
+    // Zaman dilimine göre mum süresini hesapla
+    const getCandleDuration = (tf: string): number => {
+      switch (tf) {
+        case '1m': return 1 * 60 * 1000;
+        case '5m': return 5 * 60 * 1000;
+        case '1h': return 60 * 60 * 1000;
+        case '4h': return 4 * 60 * 60 * 1000;
+        case '12h': return 12 * 60 * 60 * 1000;
+        case '1d': return 24 * 60 * 60 * 1000;
+        default: return 5 * 60 * 1000;
+      }
+    };
+    
+    const candleCount = getCandleCount(timeframe);
+    const candleDuration = getCandleDuration(timeframe);
+    
+    // Simüle edilmiş mum verileri oluştur
     const candles = [];
     const basePrice = 4250;
     const now = Date.now();
     
-    // 24 saat = 1440 dakika, 5 dakikalık aralıklarla = 288 mum
-    for (let i = 287; i >= 0; i--) {
-      const timestamp = now - (i * 5 * 60 * 1000); // 5 dakika aralıklarla
+    for (let i = candleCount - 1; i >= 0; i--) {
+      const timestamp = now - (i * candleDuration);
       
       // Daha gerçekçi fiyat hareketi - trend takibi
       const trend = Math.sin(i * 0.1) * 50; // Yumuşak trend
@@ -43,14 +73,14 @@ export async function GET() {
       });
     }
     
-    console.log(`Generated ${candles.length} clean 5-minute candles for 24h`);
+    console.log(`Generated ${candles.length} clean ${timeframe} candles for 24h`);
     
     return NextResponse.json({
       success: true,
       data: {
         candles,
         symbol: env.SYMBOL,
-        interval: '5m',
+        interval: timeframe,
         lastUpdated: new Date().toISOString(),
       },
     });
