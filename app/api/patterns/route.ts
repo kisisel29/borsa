@@ -1,11 +1,9 @@
 import { NextResponse } from 'next/server';
 import { CandlestickPatternService } from '@/services/candlestickPatternService';
-import { getEnv } from '@/lib/env';
 
 export async function GET() {
   try {
-    const env = getEnv();
-    const symbol = env.SYMBOL.replace('/', '');
+    const symbol = 'ETH/USDT';
     const currentTime = Date.now();
     
     console.log('Generating simulated candles for pattern detection');

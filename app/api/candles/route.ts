@@ -1,12 +1,10 @@
 import { NextResponse } from 'next/server';
-import { getEnv } from '@/lib/env';
 
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const timeframe = searchParams.get('timeframe') || '5m';
-    const env = getEnv();
-    const symbol = env.SYMBOL.replace('/', '');
+    const symbol = 'ETH/USDT';
     
     console.log(`Generating clean ${timeframe} candlestick data for:`, symbol);
     
@@ -79,7 +77,7 @@ export async function GET(request: Request) {
       success: true,
       data: {
         candles,
-        symbol: env.SYMBOL,
+        symbol: symbol,
         interval: timeframe,
         lastUpdated: new Date().toISOString(),
       },
