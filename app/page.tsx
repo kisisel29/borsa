@@ -5,6 +5,7 @@ import { MetricCard } from '@/components/dashboard/MetricCard';
 import { SignalCard } from '@/components/dashboard/SignalCard';
 import { PositionCard } from '@/components/dashboard/PositionCard';
 import { CandlestickChart } from '@/components/dashboard/CandlestickChart';
+import { CandlestickPatternsCard } from '@/components/dashboard/CandlestickPatternsCard';
 import { TradesTable } from '@/components/dashboard/TradesTable';
 import { Button } from '@/components/ui/button';
 import { RefreshCw, TrendingUp, Download, Play, Pause } from 'lucide-react';
@@ -349,6 +350,7 @@ export default function Dashboard() {
           </div>
           <div className="space-y-6">
             <SignalCard signal={latestSignal || data.latestSignal} currentPrice={displayPrice} />
+            <CandlestickPatternsCard currentPrice={displayPrice} />
             <PositionCard 
               positions={data.openPositions} 
               onClosePosition={handleClosePosition}
