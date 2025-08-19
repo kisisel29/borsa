@@ -8,10 +8,9 @@ export async function GET() {
     const env = getEnv();
     
     const symbol = env.SYMBOL.replace('/', '');
-    const proxyUrl = 'http://localhost:3004/api/binance';
     // Timestamp ekleyerek cache'i bypass et
     const timestamp = Date.now();
-    const url = `${proxyUrl}/api/v3/ticker/24hr?symbol=${symbol}&timestamp=${timestamp}`;
+    const url = `https://api.binance.com/api/v3/ticker/24hr?symbol=${symbol}&timestamp=${timestamp}`;
     
     console.log('Fetching from:', url);
     

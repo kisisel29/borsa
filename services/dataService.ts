@@ -3,10 +3,9 @@ import { getEnv } from '@/lib/env';
 
 export class DataService {
   private env = getEnv();
-  private proxyUrl = 'http://localhost:3004/api/binance';
 
   private async makeRequest(endpoint: string): Promise<any> {
-    const url = `${this.proxyUrl}${endpoint}`;
+    const url = `https://api.binance.com${endpoint}`;
     
     const response = await fetch(url, {
       method: 'GET',
