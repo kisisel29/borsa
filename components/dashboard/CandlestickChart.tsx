@@ -71,14 +71,52 @@ export function CandlestickChart({ symbol, currentPrice }: CandlestickChartProps
           top: 0.1,
           bottom: 0.1,
         },
+        visible: true,
+        autoScale: true,
       },
       timeScale: {
         borderColor: '#374151',
         timeVisible: true,
         secondsVisible: false,
+        rightOffset: 5,
+        barSpacing: 3, // Mumlar arası mesafe
+        fixLeftEdge: true,
+        fixRightEdge: true,
+        lockVisibleTimeRangeOnResize: true,
+        rightBarStaysOnScroll: true,
+        visible: true,
+        tickMarkFormatter: (time: number) => {
+          const date = new Date(time * 1000);
+          const hours = date.getHours().toString().padStart(2, '0');
+          const minutes = date.getMinutes().toString().padStart(2, '0');
+          return `${hours}:${minutes}`;
+        },
       },
       crosshair: {
         mode: 1,
+        vertLine: {
+          color: '#3B82F6',
+          width: 1,
+          style: LineStyle.Solid,
+          labelVisible: true,
+        },
+        horzLine: {
+          color: '#3B82F6',
+          width: 1,
+          style: LineStyle.Solid,
+          labelVisible: true,
+        },
+      },
+      handleScroll: {
+        mouseWheel: true,
+        pressedMouseMove: true,
+        horzTouchDrag: true,
+        vertTouchDrag: true,
+      },
+      handleScale: {
+        axisPressedMouseMove: true,
+        mouseWheel: true,
+        pinch: true,
       },
     });
 
@@ -89,6 +127,11 @@ export function CandlestickChart({ symbol, currentPrice }: CandlestickChartProps
       borderUpColor: '#10B981',
       wickDownColor: '#EF4444',
       wickUpColor: '#10B981',
+      priceFormat: {
+        type: 'price',
+        precision: 2,
+        minMove: 0.01,
+      },
     });
 
     // Mum verilerini grafik formatına dönüştür
@@ -101,7 +144,17 @@ export function CandlestickChart({ symbol, currentPrice }: CandlestickChartProps
     }));
 
     candlestickSeries.setData(chartData);
-    chart.timeScale().fitContent();
+    
+    // Grafiği son 50 mumu gösterecek şekilde ayarla
+    const visibleRange = chart.timeScale().getVisibleRange();
+    if (visibleRange) {
+      const lastIndex = chartData.length - 1;
+      const startIndex = Math.max(0, lastIndex - 50);
+      chart.timeScale().setVisibleRange({
+        from: chartData[startIndex].time,
+        to: chartData[lastIndex].time,
+      });
+    }
 
     chartRef.current = chart;
     candlestickSeriesRef.current = candlestickSeries;

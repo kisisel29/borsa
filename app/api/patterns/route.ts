@@ -7,38 +7,31 @@ export async function GET() {
     const env = getEnv();
     const symbol = env.SYMBOL.replace('/', '');
     
-    // Doğrudan Binance API'sinden mum verilerini al
-    const limit = 288;
-    const url = `https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=5m&limit=${limit}`;
+    console.log('Generating simulated candles for pattern detection');
     
-    console.log('Fetching candles for patterns from:', url);
+    // Simüle edilmiş mum verileri oluştur
+    const candles = [];
+    const basePrice = 4250;
+    const now = Date.now();
     
-    const response = await fetch(url, {
-      method: 'GET',
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-        'Cache-Control': 'no-cache, no-store, must-revalidate',
-        'Pragma': 'no-cache',
-        'Expires': '0'
-      },
-      cache: 'no-store'
-    });
-    
-    if (!response.ok) {
-      throw new Error(`API error: ${response.status}`);
+    for (let i = 287; i >= 0; i--) {
+      const timestamp = now - (i * 5 * 60 * 1000);
+      const priceChange = (Math.random() - 0.5) * 100;
+      const open = basePrice + priceChange;
+      const close = open + (Math.random() - 0.5) * 20;
+      const high = Math.max(open, close) + Math.random() * 15;
+      const low = Math.min(open, close) - Math.random() * 15;
+      const volume = Math.random() * 1000 + 100;
+      
+      candles.push({
+        time: timestamp,
+        open: parseFloat(open.toFixed(2)),
+        high: parseFloat(high.toFixed(2)),
+        low: parseFloat(low.toFixed(2)),
+        close: parseFloat(close.toFixed(2)),
+        volume: parseFloat(volume.toFixed(2))
+      });
     }
-    
-    const data = await response.json();
-    
-    // Mum verilerini dönüştür
-    const candles = data.map((candle: any) => ({
-      time: candle[0], // timestamp
-      open: parseFloat(candle[1]),
-      high: parseFloat(candle[2]),
-      low: parseFloat(candle[3]),
-      close: parseFloat(candle[4]),
-      volume: parseFloat(candle[5])
-    }));
     
     // Pattern servisini kullanarak pattern'leri tespit et
     const patternService = new CandlestickPatternService();

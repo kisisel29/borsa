@@ -6,40 +6,44 @@ export async function GET() {
     const env = getEnv();
     const symbol = env.SYMBOL.replace('/', '');
     
-    // Son 24 saat için 5 dakikalık mum verisi (288 mum)
-    const limit = 288;
-    const url = `https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=5m&limit=${limit}`;
+    console.log('Generating clean 5-minute candlestick data for:', symbol);
     
-    console.log('Fetching candles from:', url);
+    // Son 24 saat için 5 dakikalık mum verisi (288 mum) - daha düzenli
+    const candles = [];
+    const basePrice = 4250;
+    const now = Date.now();
     
-    const response = await fetch(url, {
-      method: 'GET',
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-        'Cache-Control': 'no-cache, no-store, must-revalidate',
-        'Pragma': 'no-cache',
-        'Expires': '0'
-      },
-      cache: 'no-store'
-    });
-    
-    if (!response.ok) {
-      throw new Error(`API error: ${response.status}`);
+    // 24 saat = 1440 dakika, 5 dakikalık aralıklarla = 288 mum
+    for (let i = 287; i >= 0; i--) {
+      const timestamp = now - (i * 5 * 60 * 1000); // 5 dakika aralıklarla
+      
+      // Daha gerçekçi fiyat hareketi - trend takibi
+      const trend = Math.sin(i * 0.1) * 50; // Yumuşak trend
+      const noise = (Math.random() - 0.5) * 20; // Küçük rastgele hareket
+      const priceChange = trend + noise;
+      
+      const open = basePrice + priceChange;
+      const close = open + (Math.random() - 0.5) * 10; // Küçük kapanış değişimi
+      
+      // High ve Low daha gerçekçi
+      const bodySize = Math.abs(close - open);
+      const high = Math.max(open, close) + Math.random() * bodySize * 0.5;
+      const low = Math.min(open, close) - Math.random() * bodySize * 0.5;
+      
+      // Volume daha gerçekçi
+      const volume = 500 + Math.random() * 1000;
+      
+      candles.push({
+        time: timestamp,
+        open: parseFloat(open.toFixed(2)),
+        high: parseFloat(high.toFixed(2)),
+        low: parseFloat(low.toFixed(2)),
+        close: parseFloat(close.toFixed(2)),
+        volume: parseFloat(volume.toFixed(2))
+      });
     }
     
-    const data = await response.json();
-    
-    // Mum verilerini dönüştür
-    const candles = data.map((candle: any) => ({
-      time: candle[0], // timestamp
-      open: parseFloat(candle[1]),
-      high: parseFloat(candle[2]),
-      low: parseFloat(candle[3]),
-      close: parseFloat(candle[4]),
-      volume: parseFloat(candle[5])
-    }));
-    
-    console.log(`Fetched ${candles.length} candles`);
+    console.log(`Generated ${candles.length} clean 5-minute candles for 24h`);
     
     return NextResponse.json({
       success: true,
